@@ -160,6 +160,23 @@ export const useTextToSpeech = () => {
     }
   }, [supported]);
 
+  // Method to "wake up" the TTS engine on iOS.
+  // Must be called inside a direct user interaction (e.g., click handler).
+  const unlock = useCallback(() => {
+    if (!supported) return;
+    // Speak an empty string or space.
+    // iOS Safari requires a direct user interaction to start audio.
+    // By doing this on button click, we "enable" the audio session.
+    const utterance = new SpeechSynthesisUtterance(" ");
+    utterance.volume = 0; // Silent
+    utterance.rate = 10;  // Fast
+    window.speechSynthesis.speak(utterance);
+    
+    if (window.speechSynthesis.paused) {
+        window.speechSynthesis.resume();
+    }
+  }, [supported]);
+
   // Periodic check to ensure queue moves if voices loaded late or browser state changed
   useEffect(() => {
     const interval = setInterval(() => {
@@ -170,5 +187,5 @@ export const useTextToSpeech = () => {
     return () => clearInterval(interval);
   }, [processQueue]);
 
-  return { speak, stop, isSpeaking, supported };
+  return { speak, stop, isSpeaking, supported, unlock };
 };

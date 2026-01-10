@@ -48,7 +48,7 @@ const App: React.FC = () => {
      await finalizeTranslation(text);
   };
 
-  const { speak, isSpeaking } = useTextToSpeech();
+  const { speak, isSpeaking, unlock } = useTextToSpeech();
 
   const {
     isListening,
@@ -198,6 +198,7 @@ const App: React.FC = () => {
       ignorePendingUpdates.current = false;
       setLiveTranslation("");
       resetTranscript();
+      unlock(); // UNLOCK iOS TTS
       await startListening();
       return;
     }
@@ -220,6 +221,7 @@ const App: React.FC = () => {
       ignorePendingUpdates.current = false;
       setLiveTranslation("");
       resetTranscript();
+      unlock(); // UNLOCK iOS TTS on initial click
       await startListening();
     }
   };
@@ -233,6 +235,7 @@ const App: React.FC = () => {
         // If currently manual listening, the hook's useEffect dependency change 
         // will handle stop, then our auto-start effect will kick in.
         // But to be clean, we can just set state.
+        unlock(); // UNLOCK iOS TTS on initial click
         setIsContinuousMode(true);
     }
   };

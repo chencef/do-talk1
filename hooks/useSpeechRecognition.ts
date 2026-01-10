@@ -248,8 +248,10 @@ export const useSpeechRecognition = (
         if (isContinuousRef.current && isListeningRef.current) {
            const finalType = mediaRecorder.mimeType || selectedMimeType;
            const blob = new Blob(audioChunksRef.current, { type: finalType });
-           audioChunksRef.current = []; 
            
+           // MEMORY CLEANUP: Clear buffer immediately after creating Blob
+           audioChunksRef.current = []; 
+
            processContinuousSegment(blob);
 
            if (mediaRecorder.state === 'inactive') {
@@ -319,6 +321,9 @@ export const useSpeechRecognition = (
         const finalType = mediaRecorder.mimeType || 'audio/webm';
         const audioBlob = new Blob(audioChunksRef.current, { type: finalType });
         
+        // MEMORY CLEANUP: Explicitly clear the buffer after use in manual mode as well
+        audioChunksRef.current = [];
+        
         if (audioBlob.size > 1000) {
             try {
               const text = await transcribeAudio(audioBlob, sourceLangRef.current, targetLangRef.current);
@@ -357,7 +362,7 @@ export const useSpeechRecognition = (
       streamRef.current = null;
     }
     setTranscript('');
-    audioChunksRef.current = [];
+    audioChunksRef.current = []; // Clear buffer
   }, []);
 
   const resetTranscript = useCallback(() => {
