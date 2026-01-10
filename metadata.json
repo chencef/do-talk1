@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Copy of Do-Talk",
+  "description": "A PWA-enabled real-time voice translation application supporting Chinese, English, Vietnamese, Thai, and Indonesian, powered by Groq.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
