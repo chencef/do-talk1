@@ -12,8 +12,16 @@ import { Volume2, Trash2, History, ArrowRight, Menu, X, Settings, Headphones, Gl
 import './App.css';
 import { CameraPage, CameraPageHandle } from './components/CameraPage';
 
+interface TTSState {
+  active: boolean;
+  ear: 'left' | 'right' | 'both';
+  lang: string;
+  queue: string[];
+  lastPlayed: string;
+}
+
 const App: React.FC = () => {
-  // ── 1. Global States ──────────────────────────────────────────────────────
+  // ── 1. General States ──────────────────────────────────────────────────────
   const [appLanguage, setAppLanguage] = useState<AppLanguage>('zh-TW');
   const [volume, setVolume] = useState<number>(100);
   const [sourceLang, setSourceLang] = useState<LanguageCode>(DEFAULT_SOURCE_LANG);
@@ -105,25 +113,31 @@ const App: React.FC = () => {
   const {
     translatedText: sourceToTargetTrans,
     sendText: sendSourceToTarget,
-    clearTranslatedText: clearSourceTrans,
-    isConnecting: isS2TConnecting,
-    error: s2tError,
-    translatedTextRef: sourceToTargetTransRef
-  } = useTranslationSocket(sourceLang, targetLang, 'source-to-target');
+    clearTranslation: clearSourceTrans,
+    isConnecting: isS2TConnecting
+  } = useTranslationSocket(sourceLang, targetLang);
 
   const {
     translatedText: targetToSourceTrans,
     sendText: sendTargetToSource,
-    clearTranslatedText: clearTargetTrans,
-    isConnecting: isT2SConnecting,
-    error: t2sError,
-    translatedTextRef: targetToSourceTransRef
-  } = useTranslationSocket(targetLang, sourceLang, 'target-to-source');
+    clearTranslation: clearTargetTrans,
+    isConnecting: isT2SConnecting
+  } = useTranslationSocket(targetLang, sourceLang);
 
   const liveTranslationRef = useRef(liveTranslation);
   useEffect(() => {
     liveTranslationRef.current = liveTranslation;
   }, [liveTranslation]);
+
+  const sourceToTargetTransRef = useRef(sourceToTargetTrans);
+  useEffect(() => {
+    sourceToTargetTransRef.current = sourceToTargetTrans;
+  }, [sourceToTargetTrans]);
+
+  const targetToSourceTransRef = useRef(targetToSourceTrans);
+  useEffect(() => {
+    targetToSourceTransRef.current = targetToSourceTrans;
+  }, [targetToSourceTrans]);
 
   // ── 7. Hook-dependent Functions ───────────────────────────────────────────
   function clearHistory() {
@@ -969,11 +983,6 @@ const App: React.FC = () => {
           {/* Main Content Area - Full Screen Split */}
           <main className="flex-1 w-full max-w-2xl px-4 pt-4 pb-4 flex flex-col gap-4 overflow-hidden">
             {/* Error Message */}
-            {sttError && (
-              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-lg border border-red-100 flex items-center justify-center shrink-0">
-                {sttError}
-              </div>
-            )}
 
             {/* Top Half: Source Language (Chinese) */}
             <div className="flex-1 bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col relative overflow-hidden group">
