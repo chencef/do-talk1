@@ -301,6 +301,7 @@
 /* 掃描主區（青色邊框，半透明背景） */
 .scan-main-area {
     flex: 1;
+    min-height: 120px;
     border: 2px solid rgba(0, 255, 255, 0.8);
     background: rgba(0, 255, 255, 0.05);
     position: relative;
