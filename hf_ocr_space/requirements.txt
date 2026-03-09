@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+rapidocr_onnxruntime==1.2.3
+opencv-python-headless
+numpy
+pydantic
+opencc-python-reimplemented

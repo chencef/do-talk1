@@ -12,16 +12,26 @@ export type AppLanguage = 'zh-TW' | 'en-US' | 'vi-VN' | 'th-TH' | 'id-ID';
 export interface LanguageOption {
   code: LanguageCode;
   label: string;
-  flag: string; // Emoji flag
+  flag: string;
+}
+
+export interface WordInfo {
+  word: string;
+  confidence: number;
 }
 
 export interface TranslationRecord {
   id: string;
   sourceText: string;
-  translatedText: string;
+  sourceTranslatedText: string; // Translation of sourceText
+  sourceCorrectedText?: string;  // AI-corrected sourceText
+  targetText: string;
+  targetTranslatedText: string; // Translation of targetText
   sourceLang: LanguageCode;
   targetLang: LanguageCode;
   timestamp: number;
+  sourceConfidence?: number; // Overall confidence for sourceText
+  sourceWords?: WordInfo[];   // Word-level confidence for sourceText
   isAudioPlaying?: boolean;
 }
 
@@ -61,4 +71,8 @@ export interface UITranslation {
   continuousMode: string;
   sourceTextLabel: string;
   translatedTextLabel: string;
+  modelSettings: string;
+  selectModel: string;
 }
+
+export type ModelProvider = 'groq' | 'deepgram';

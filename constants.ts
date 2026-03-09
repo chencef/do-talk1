@@ -2,8 +2,7 @@
 import { LanguageCode, LanguageOption, AppLanguage, UITranslation } from './types';
 
 // NOTE: The API key tries to load from the environment variable "groq_api".
-// If not found (e.g., in local preview without env setup), it falls back to the provided hardcoded key.
-export const GROQ_API_KEY = process.env.groq_api || "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";
+export const GROQ_API_KEY = process.env.groq_api || "";
 export const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
@@ -23,11 +22,11 @@ export const APP_LANGUAGES: { code: AppLanguage; label: string }[] = [
 ];
 
 export const DEFAULT_SOURCE_LANG = LanguageCode.Chinese;
-export const DEFAULT_TARGET_LANG = LanguageCode.English;
+export const DEFAULT_TARGET_LANG = LanguageCode.Indonesian;
 
 export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
   'zh-TW': {
-    appName: 'Do-Talk',
+    appName: '2-Talk',
     settings: '設定',
     translationSettings: '1. 翻譯語言',
     headphoneSettings: '2. 耳機設定',
@@ -46,7 +45,7 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     processing: '處理中...',
     liveTranslation: '即時翻譯',
     startRecord: '點擊翻譯',
-    stopRecord: '點擊停止並儲存',
+    stopRecord: '停止',
     confirmClear: '確定要清除所有翻譯紀錄嗎？',
     rightEar: '右耳',
     leftEar: '左耳',
@@ -54,9 +53,11 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     continuousMode: '連續翻譯',
     sourceTextLabel: '原文',
     translatedTextLabel: '譯文',
+    modelSettings: '5. 語音辨識模型',
+    selectModel: '選擇模型',
   },
   'en-US': {
-    appName: 'Do-Talk',
+    appName: '2-Talk',
     settings: 'Settings',
     translationSettings: '1. Translation Languages',
     headphoneSettings: '2. Headphone Settings',
@@ -75,7 +76,7 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     processing: 'Processing...',
     liveTranslation: 'Live Translation',
     startRecord: 'Tap to start speaking',
-    stopRecord: 'Tap to stop & save',
+    stopRecord: 'Stop',
     confirmClear: 'Are you sure you want to clear all history?',
     rightEar: 'Right Ear',
     leftEar: 'Left Ear',
@@ -83,9 +84,11 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     continuousMode: 'Continuous Mode',
     sourceTextLabel: 'Original',
     translatedTextLabel: 'Translation',
+    modelSettings: '5. Speech Recognition Model',
+    selectModel: 'Select Model',
   },
   'vi-VN': {
-    appName: 'Do-Talk',
+    appName: '2-Talk',
     settings: 'Cài đặt',
     translationSettings: '1. Ngôn ngữ dịch',
     headphoneSettings: '2. Cài đặt tai nghe',
@@ -104,7 +107,7 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     processing: 'Đang xử lý...',
     liveTranslation: 'Dịch trực tiếp',
     startRecord: 'Nhấn để nói',
-    stopRecord: 'Nhấn để dừng & lưu',
+    stopRecord: 'Dừng',
     confirmClear: 'Bạn có chắc chắn muốn xóa tất cả lịch sử không?',
     rightEar: 'Tai phải',
     leftEar: 'Tai trái',
@@ -112,9 +115,11 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     continuousMode: 'Chế độ liên tục',
     sourceTextLabel: 'Bản gốc',
     translatedTextLabel: 'Bản dịch',
+    modelSettings: '5. Mô hình nhận dạng giọng nói',
+    selectModel: 'Chọn mô hình',
   },
   'th-TH': {
-    appName: 'Do-Talk',
+    appName: '2-Talk',
     settings: 'การตั้งค่า',
     translationSettings: '1. ภาษาแปล',
     headphoneSettings: '2. การตั้งค่าหูฟัง',
@@ -133,7 +138,7 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     processing: 'กำลังประมวลผล...',
     liveTranslation: 'การแปลสด',
     startRecord: 'แตะเพื่อเริ่มพูด',
-    stopRecord: 'แตะเพื่อหยุดและบันทึก',
+    stopRecord: 'หยุด',
     confirmClear: 'คุณแน่ใจหรือไม่ว่าต้องการล้างประวัติทั้งหมด?',
     rightEar: 'หูขวา',
     leftEar: 'หูซ้าย',
@@ -141,9 +146,11 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     continuousMode: 'โหมดต่อเนื่อง',
     sourceTextLabel: 'ต้นฉบับ',
     translatedTextLabel: 'คำแปล',
+    modelSettings: '5. โมเดลการรู้จำเสียง',
+    selectModel: 'เลือกโมเดล',
   },
   'id-ID': {
-    appName: 'Do-Talk',
+    appName: '2-Talk',
     settings: 'Pengaturan',
     translationSettings: '1. Bahasa Terjemahan',
     headphoneSettings: '2. Pengaturan Headphone',
@@ -162,7 +169,7 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     processing: 'Memproses...',
     liveTranslation: 'Terjemahan Langsung',
     startRecord: 'Ketuk untuk bicara',
-    stopRecord: 'Ketuk untuk berhenti & simpan',
+    stopRecord: 'Berhenti',
     confirmClear: 'Apakah Anda yakin ingin menghapus semua riwayat?',
     rightEar: 'Telinga Kanan',
     leftEar: 'Telinga Kiri',
@@ -170,5 +177,22 @@ export const UI_TRANSLATIONS: Record<AppLanguage, UITranslation> = {
     continuousMode: 'Mode Berkelanjutan',
     sourceTextLabel: 'Asli',
     translatedTextLabel: 'Terjemahan',
+    modelSettings: '5. Model Transkripsi',
+    selectModel: 'Pilih Model',
   },
 };
+
+export const DEEPGRAM_API_KEY = "1086346cfb07b5b3df56a2169560ab033267cba9";
+
+export const MODEL_OPTIONS: { value: 'groq' | 'deepgram'; label: string }[] = [
+  { value: 'groq', label: 'Groq Whisper (Fast)' },
+  { value: 'deepgram', label: 'Deepgram Nova-3 (Fastest)' },
+];
+
+export const CLOUDFLARE_BACKEND_URL = 'https://do-talk-backend.chencef.workers.dev';
+
+// OCR 後端服務（HuggingFace Spaces）
+// Space 網址：https://huggingface.co/spaces/chencef/dotalk-ocr
+// 部署說明：將 hf_ocr_space/ 目錄內容推送至 HuggingFace Space repo
+export const OCR_BACKEND_URL = 'https://chencef-dotalk-ocr.hf.space';
+

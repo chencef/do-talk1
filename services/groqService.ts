@@ -48,6 +48,8 @@ export const translateText = async (
   - OUTPUT ONLY THE TRANSLATED TEXT. NO EXPLANATIONS, NO NOTES.
   - IF THE TARGET OUTPUT LANGUAGE IS CHINESE: YOU MUST USE TRADITIONAL CHINESE (繁體中文).
   - DO NOT USE SIMPLIFIED CHINESE (简体中文).
+  - DO NOT OUTPUT ENGLISH, unless English is one of the selected languages (${sourceName} or ${targetName}).
+  - If the input is in English (and English is NOT selected), translate it to ${targetName}.
   - If the input is Simplified Chinese, treat it as Chinese and translate to ${targetName} (unless target is Chinese, then convert to Traditional).`;
 
   try {
@@ -58,12 +60,12 @@ export const translateText = async (
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile", 
+        model: "llama-3.3-70b-versatile",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: text }
         ],
-        temperature: 0.1, 
+        temperature: 0.1,
         max_tokens: 1024,
       }),
     });
@@ -95,7 +97,7 @@ export const transcribeAudio = async (
   // Groq requires a file with a valid extension
   formData.append("file", audioBlob, "recording.webm");
   formData.append("model", "whisper-large-v3");
-  
+
   const langMap: Record<string, string> = {
     [LanguageCode.Chinese]: "Traditional Chinese",
     [LanguageCode.English]: "English",
@@ -103,11 +105,21 @@ export const transcribeAudio = async (
     [LanguageCode.Thai]: "Thai",
     [LanguageCode.Indonesian]: "Indonesian"
   };
-  
+
   // PROMPT ENGINEERING FOR WHISPER:
-  // To force Traditional Chinese, we inject Traditional Chinese text into the prompt.
-  // This acts as a "previous context" that biases the model to continue in Traditional script.
-  const prompt = `以下是繁體中文的句子。The audio contains ${langMap[sourceLang]} or ${langMap[targetLang]}.`;
+  // Dynamically set the initial prompt based on the source language.
+  let prompt = "";
+  if (sourceLang === LanguageCode.Chinese) {
+    prompt = `以下是繁體中文的句子。The audio contains ${langMap[sourceLang]} or ${langMap[targetLang]}.`;
+  } else if (sourceLang === LanguageCode.Thai) {
+    prompt = `ข้อความต่อไปนี้เป็นภาษาไทย The audio contains ${langMap[sourceLang]} or ${langMap[targetLang]}.`;
+  } else if (sourceLang === LanguageCode.Vietnamese) {
+    prompt = `Sau đây là câu tiếng Việt. The audio contains ${langMap[sourceLang]} or ${langMap[targetLang]}.`;
+  } else if (sourceLang === LanguageCode.Indonesian) {
+    prompt = `Berikut adalah kalimat dalam bahasa Indonesia. The audio contains ${langMap[sourceLang]} or ${langMap[targetLang]}.`;
+  } else {
+    prompt = `The audio contains ${langMap[sourceLang]} or ${langMap[targetLang]}.`;
+  }
   formData.append("prompt", prompt);
 
   // We set response format to json

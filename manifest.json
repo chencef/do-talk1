@@ -1,6 +1,6 @@
 {
-  "name": "Do-Talk Translator",
-  "short_name": "Do-Talk",
+  "name": "2-Talk Translator",
+  "short_name": "2-Talk",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#ffffff",

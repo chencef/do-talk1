@@ -5,15 +5,17 @@ import { LanguageCode } from '../types';
 interface QueueItem {
   text: string;
   language: LanguageCode;
-  pan: number; // Note: Panning is not supported by standard SpeechSynthesis API yet, but kept for interface compatibility
+  pan: number;
   volume: number;
+  type?: 'source' | 'target'; // 新增：用於標記播放端 (來源或目標)
 }
 
 export const useTextToSpeech = () => {
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingType, setSpeakingType] = useState<'source' | 'target' | null>(null); // 新增：追蹤目前播放中的類別
   const [supported, setSupported] = useState(false);
   const [voicesLoaded, setVoicesLoaded] = useState(false);
-  
+
   // Queue to hold pending utterances
   const queueRef = useRef<QueueItem[]>([]);
   const isProcessingQueueRef = useRef(false);
@@ -22,7 +24,7 @@ export const useTextToSpeech = () => {
   useEffect(() => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       setSupported(true);
-      
+
       // Initial voice load check
       const voices = window.speechSynthesis.getVoices();
       if (voices.length > 0) {
@@ -35,7 +37,7 @@ export const useTextToSpeech = () => {
       };
 
       window.speechSynthesis.onvoiceschanged = handleVoicesChanged;
-      
+
       // Cleanup: Cancel any ongoing speech when unmounting
       return () => {
         window.speechSynthesis.onvoiceschanged = null;
@@ -66,10 +68,10 @@ export const useTextToSpeech = () => {
 
   const processQueue = useCallback(() => {
     if (!supported) return;
-    
+
     // FIX: Chrome TTS often gets paused or stuck. Force resume.
     if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+      window.speechSynthesis.resume();
     }
 
     if (queueRef.current.length === 0 || isProcessingQueueRef.current || window.speechSynthesis.speaking) {
@@ -81,15 +83,15 @@ export const useTextToSpeech = () => {
     const item = queueRef.current.shift();
 
     if (!item) {
-        isProcessingQueueRef.current = false;
-        return;
+      isProcessingQueueRef.current = false;
+      return;
     }
 
     const utterance = new SpeechSynthesisUtterance(item.text);
     utterance.lang = item.language;
-    utterance.rate = 1.0; 
+    utterance.rate = 1.0;
     utterance.volume = item.volume;
-    
+
     // Select Voice
     const voice = getBestVoice(item.language);
     if (voice) {
@@ -97,55 +99,58 @@ export const useTextToSpeech = () => {
     }
 
     utterance.onstart = () => {
-        setIsSpeaking(true);
-        // Clear safety timeout from previous if any
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        
-        // Watchdog: If onend doesn't fire within 30s (long text) or bugs out, kill it.
-        timeoutRef.current = window.setTimeout(() => {
-            console.warn("TTS timed out (watchdog), resetting...");
-            window.speechSynthesis.cancel();
-            setIsSpeaking(false);
-            isProcessingQueueRef.current = false;
-            // Try next
-            processQueue();
-        }, 30000);
+      setIsSpeaking(true);
+      if (item.type) setSpeakingType(item.type); // 設定播放類別
+      // Clear safety timeout from previous if any
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+      // Watchdog: If onend doesn't fire within 30s (long text) or bugs out, kill it.
+      timeoutRef.current = window.setTimeout(() => {
+        console.warn("TTS timed out (watchdog), resetting...");
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+        isProcessingQueueRef.current = false;
+        // Try next
+        processQueue();
+      }, 30000);
     };
 
     utterance.onend = () => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setIsSpeaking(false);
-        isProcessingQueueRef.current = false;
-        // Small delay for natural pacing
-        setTimeout(() => {
-            processQueue();
-        }, 200);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setIsSpeaking(false);
+      setSpeakingType(null); // 清除播放類別
+      isProcessingQueueRef.current = false;
+      // Small delay for natural pacing
+      setTimeout(() => {
+        processQueue();
+      }, 200);
     };
 
     utterance.onerror = (e) => {
-        console.error("TTS Error Event:", e);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        setIsSpeaking(false);
-        isProcessingQueueRef.current = false;
-        // Proceed to next
-        processQueue();
+      console.error("TTS Error Event:", e);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      setIsSpeaking(false);
+      setSpeakingType(null); // 發生錯誤也清除
+      isProcessingQueueRef.current = false;
+      // Proceed to next
+      processQueue();
     };
 
     try {
-        window.speechSynthesis.speak(utterance);
+      window.speechSynthesis.speak(utterance);
     } catch (err) {
-        console.error("speechSynthesis.speak threw error:", err);
-        isProcessingQueueRef.current = false;
+      console.error("speechSynthesis.speak threw error:", err);
+      isProcessingQueueRef.current = false;
     }
 
   }, [supported]);
 
-  const speak = useCallback((text: string, language: LanguageCode, pan: number = 0, volume: number = 1.0) => {
+  const speak = useCallback((text: string, language: LanguageCode, pan: number = 0, volume: number = 1.0, type?: 'source' | 'target') => {
     if (!supported || !text) return;
-    
+
     // Push to queue
-    queueRef.current.push({ text, language, pan, volume });
-    
+    queueRef.current.push({ text, language, pan, volume, type });
+
     // Try to process immediately
     processQueue();
   }, [supported, processQueue]);
@@ -155,6 +160,7 @@ export const useTextToSpeech = () => {
       queueRef.current = [];
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      setSpeakingType(null);
       isProcessingQueueRef.current = false;
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     }
@@ -171,21 +177,21 @@ export const useTextToSpeech = () => {
     utterance.volume = 0; // Silent
     utterance.rate = 10;  // Fast
     window.speechSynthesis.speak(utterance);
-    
+
     if (window.speechSynthesis.paused) {
-        window.speechSynthesis.resume();
+      window.speechSynthesis.resume();
     }
   }, [supported]);
 
   // Periodic check to ensure queue moves if voices loaded late or browser state changed
   useEffect(() => {
     const interval = setInterval(() => {
-        if (queueRef.current.length > 0 && !isProcessingQueueRef.current && !window.speechSynthesis.speaking) {
-            processQueue();
-        }
+      if (queueRef.current.length > 0 && !isProcessingQueueRef.current && !window.speechSynthesis.speaking) {
+        processQueue();
+      }
     }, 1000);
     return () => clearInterval(interval);
   }, [processQueue]);
 
-  return { speak, stop, isSpeaking, supported, unlock };
+  return { speak, stop, isSpeaking, speakingType, supported, unlock };
 };
