@@ -66,8 +66,33 @@ const App: React.FC = () => {
   const handleContinuousResult = async (text: string, translation?: string, audioBlob?: Blob, confidence?: number, words?: any[]) => {
     if (!text?.trim() && !translation?.trim()) return;
     await new Promise(resolve => setTimeout(resolve, 400));
-    await finalizeTranslation(text, translation, audioBlob, sourceToTargetTransRef.current, targetToSourceTransRef.current, confidence, words);
+    const currentS2T = sourceToTargetTransRef.current;
+    const currentT2S = targetToSourceTransRef.current;
+    await finalizeTranslation(text, translation, audioBlob, currentS2T, currentT2S, confidence, words);
   };
+
+  // Sync Draft State
+  useEffect(() => {
+    setPendingSourceLang(sourceLang);
+    setPendingTargetLang(targetLang);
+  }, [sourceLang, targetLang]);
+  useEffect(() => {
+    setPendingVolume(volume);
+  }, [volume]);
+  useEffect(() => {
+    setPendingAppLanguage(appLanguage);
+  }, [appLanguage]);
+  useEffect(() => {
+    setPendingModelProvider(modelProvider);
+  }, [modelProvider]);
+
+  const hasUnsavedChanges =
+    sourceLang !== pendingSourceLang ||
+    targetLang !== pendingTargetLang ||
+    volume !== pendingVolume ||
+    appLanguage !== pendingAppLanguage ||
+    modelProvider !== pendingModelProvider;
+
 
   const {
     isListening, transcript, liveTranslation, startListening, stopListening,
@@ -78,14 +103,27 @@ const App: React.FC = () => {
   const { speak, isSpeaking, speakingType, unlock } = useTextToSpeech();
 
   const {
-    translatedText: sourceToTargetTrans, clearTranslatedText: clearSourceTrans,
-    isConnecting: isS2TConnecting, error: s2tError, translatedTextRef: sourceToTargetTransRef
+    translatedText: sourceToTargetTrans,
+    sendText: sendSourceToTarget,
+    clearTranslatedText: clearSourceTrans,
+    isConnecting: isS2TConnecting,
+    error: s2tError,
+    translatedTextRef: sourceToTargetTransRef
   } = useTranslationSocket(sourceLang, targetLang, 'source-to-target');
 
   const {
-    translatedText: targetToSourceTrans, clearTranslatedText: clearTargetTrans,
-    isConnecting: isT2SConnecting, error: t2sError, translatedTextRef: targetToSourceTransRef
+    translatedText: targetToSourceTrans,
+    sendText: sendTargetToSource,
+    clearTranslatedText: clearTargetTrans,
+    isConnecting: isT2SConnecting,
+    error: t2sError,
+    translatedTextRef: targetToSourceTransRef
   } = useTranslationSocket(targetLang, sourceLang, 'target-to-source');
+
+  const liveTranslationRef = useRef(liveTranslation);
+  useEffect(() => {
+    liveTranslationRef.current = liveTranslation;
+  }, [liveTranslation]);
 
   // ── 7. Hook-dependent Functions ───────────────────────────────────────────
   function clearHistory() {
@@ -300,59 +338,6 @@ const App: React.FC = () => {
   };
 
   // ---------------------------------------------------------------------------
-  // [獨立模組 1] 語音辨識 (Speech-to-Text)
-  // ---------------------------------------------------------------------------
-  const {
-    isListening,
-    transcript,
-    liveTranslation,
-    startListening,
-    stopListening,
-    abortListening,
-    resetTranscript,
-    clearLiveText,
-    error: sttError,
-    isTranscribing,
-    audioLevel,
-    isConnecting,
-    sourceConfidence,
-    sourceWords,
-    targetConfidence,
-    targetWords,
-    hasBrowserSupport,
-  } = useSpeechRecognition(sourceLang, targetLang, modelProvider, handleContinuousResult);
-
-  /**
-   * 當「停止錄音」時，自動關閉連續語音播放
-   */
-  useEffect(() => {
-    if (!isListening) {
-      if (activeTopTts) {
-        console.log("[Binaural] 錄音停止，自動關閉上框播放");
-        topTtsRef.current.active = false;
-        topTtsRef.current.resolve?.();
-        if (topTtsRef.current.audioCtx) {
-          topTtsRef.current.audioCtx.close().catch(() => { });
-          topTtsRef.current.audioCtx = undefined;
-        }
-        topTtsRef.current = { active: false, ear: 'right', lang: 'en', queue: [], lastPlayed: '' };
-        setActiveTopTts(false);
-      }
-      if (activeBottomTts) {
-        console.log("[Binaural] 錄音停止，自動關閉下框播放");
-        bottomTtsRef.current.active = false;
-        bottomTtsRef.current.resolve?.();
-        if (bottomTtsRef.current.audioCtx) {
-          bottomTtsRef.current.audioCtx.close().catch(() => { });
-          bottomTtsRef.current.audioCtx = undefined;
-        }
-        bottomTtsRef.current = { active: false, ear: 'left', lang: 'zh-TW', queue: [], lastPlayed: '' };
-        setActiveBottomTts(false);
-      }
-    }
-  }, [isListening, activeTopTts, activeBottomTts]);
-
-  // -----------------------------------------------------------------------
   // [Confidence Visualization] 信心度視覺化渲染函數
   // 規則：
   //   - 逐字信心度 < 0.85 → 該單字顯示紅色
@@ -401,57 +386,7 @@ const App: React.FC = () => {
 
 
   // ---------------------------------------------------------------------------
-  // [獨立模組 2] 文字即時翻譯 (Text-to-Text via WebSocket)
-  // 負責建立與遠端翻譯伺服器的連線，將辨識出的文字傳送過去，並接收翻譯結果。
-  // 兩個方向的翻譯被完全獨立開來，互不干擾。
-  // ---------------------------------------------------------------------------
-
-  // (上框用) 中文 (source) -> 外文 (target) 的翻譯器
-  const {
-    translatedText: sourceToTargetTrans,
-    sendText: sendSourceToTarget,
-    clearTranslation: clearSourceTrans,
-    isConnecting: isS2TConnecting // 新增：連線狀態
-  } = useTranslationSocket(sourceLang, targetLang);
-
-  // (下框用) 外文 (target) -> 中文 (source) 的翻譯器
-  const {
-    translatedText: targetToSourceTrans,
-    sendText: sendTargetToSource,
-    clearTranslation: clearTargetTrans,
-    isConnecting: isT2SConnecting // 新增：連線狀態
-  } = useTranslationSocket(targetLang, sourceLang);
-
-  // ---------------------------------------------------------------------------
-  // [模組串接] 將模組 1 的結果，即時送入模組 2 進行翻譯
-  // ---------------------------------------------------------------------------
-
-  // 當「來源語言」的辨識文字 (transcript) 有更新時，自動送去翻譯成「目標語言」
-  useEffect(() => {
-    sendSourceToTarget(transcript);
-  }, [transcript, sendSourceToTarget]);
-
-  // 當「目標語言」的辨識文字 (liveTranslation) 有更新時，自動送去翻譯成「來源語言」
-  useEffect(() => {
-    sendTargetToSource(liveTranslation);
-  }, [liveTranslation, sendTargetToSource]);
-
-  // Refs to track latest state for async closures
-  const liveTranslationRef = useRef(liveTranslation);
-  const sourceToTargetTransRef = useRef(sourceToTargetTrans);
-  const targetToSourceTransRef = useRef(targetToSourceTrans);
-
-  useEffect(() => {
-    liveTranslationRef.current = liveTranslation;
-  }, [liveTranslation]);
-
-  useEffect(() => {
-    sourceToTargetTransRef.current = sourceToTargetTrans;
-  }, [sourceToTargetTrans]);
-
-  useEffect(() => {
-    targetToSourceTransRef.current = targetToSourceTrans;
-  }, [targetToSourceTrans]);
+  // [單耳連續播放觸發器] 根據當前啟動的框，監聽對對應的翻譯文字
 
   // ---------------------------------------------------------------------------
   // [單耳連續播放觸發器] 根據當前啟動的框，監聽對應的翻譯文字
@@ -872,50 +807,6 @@ const App: React.FC = () => {
       await requestWakeLock();
     }
   };
-
-  const [isContinuousMode, setIsContinuousMode] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const pageSliderRef = useRef<HTMLDivElement>(null);
-  const wheelRef = useRef<HTMLDivElement>(null);
-  const buttonRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  const sourceScrollRef = useRef<HTMLDivElement>(null);
-  const targetScrollRef = useRef<HTMLDivElement>(null);
-  const wakeLockRef = useRef<any>(null);
-  const binauralAudioRef = useRef<{ sourceNode?: AudioBufferSourceNode, targetNode?: AudioBufferSourceNode, audioCtx?: AudioContext }>({});
-
-  const ui = UI_TRANSLATIONS[appLanguage];
-
-  const handleContinuousResult = async (text: string, translation?: string, audioBlob?: Blob, confidence?: number, words?: any[]) => {
-    if (!text?.trim() && !translation?.trim()) return;
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const currentS2T = sourceToTargetTransRef.current;
-    const currentT2S = targetToSourceTransRef.current;
-    await finalizeTranslation(text, translation, audioBlob, currentS2T, currentT2S, confidence, words);
-  };
-
-  // Sync Draft State
-  useEffect(() => {
-    setPendingSourceLang(sourceLang);
-    setPendingTargetLang(targetLang);
-  }, [sourceLang, targetLang]);
-  useEffect(() => {
-    setPendingVolume(volume);
-  }, [volume]);
-  useEffect(() => {
-    setPendingAppLanguage(appLanguage);
-  }, [appLanguage]);
-  useEffect(() => {
-    setPendingModelProvider(modelProvider);
-  }, [modelProvider]);
-
-  const hasUnsavedChanges =
-    sourceLang !== pendingSourceLang ||
-    targetLang !== pendingTargetLang ||
-    volume !== pendingVolume ||
-    appLanguage !== pendingAppLanguage ||
-    modelProvider !== pendingModelProvider;
-
   // --- [Wake Lock Logic] 防止手機休眠 ---
   const requestWakeLock = async () => {
     if ('wakeLock' in navigator) {
