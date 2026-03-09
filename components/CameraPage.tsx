@@ -572,24 +572,29 @@ export const CameraPage = forwardRef<CameraPageHandle, CameraPageProps>(
         ctx.beginPath(); ctx.arc(bcX, bcY, 3, 0, Math.PI * 2); ctx.fill();
       });
 
-      // 2. 文字排序（依Y軸，相近則依X軸）
-      results.sort((a: any, b: any) => {
-        const ya = (a.bbox[0][1] + a.bbox[2][1]) / 2;
-        const yb = (b.bbox[0][1] + b.bbox[2][1]) / 2;
-        return Math.abs(ya - yb) < 15 ? a.bbox[0][0] - b.bbox[0][0] : ya - yb;
+      // 2. 單行加速辨識邏輯：找出面積最大的文字方塊
+      let bestBlock = null;
+      let maxArea = 0;
+      results.forEach((r: any) => {
+        const width = Math.abs(r.bbox[2][0] - r.bbox[0][0]);
+        const height = Math.abs(r.bbox[2][1] - r.bbox[0][1]);
+        const area = width * height;
+        if (area > maxArea) {
+          maxArea = area;
+          bestBlock = r;
+        }
       });
 
-      const currentText = results.map((r: any) => r.text).join(' ').trim();
+      const currentText = bestBlock ? bestBlock.text.trim() : '';
       let displayText = '', hasChinese = false, isLowConfidence = false;
       let displayBlocks: { text: string; isLowConf: boolean }[] = [];
 
-      if (currentText) {
-        hasChinese = results.some((r: any) => r.has_chinese);
-        // 各別區塊信心值判斷
-        displayBlocks = results.map((r: any) => ({
-          text: r.text,
-          isLowConf: r.confidence < 0.85
-        }));
+      if (currentText && bestBlock) {
+        hasChinese = bestBlock.has_chinese;
+        displayBlocks = [{
+          text: currentText,
+          isLowConf: bestBlock.confidence < 0.85
+        }];
         // 整體是否含有紅字的判斷（影響消失速度）
         isLowConfidence = displayBlocks.some(b => b.isLowConf);
         
